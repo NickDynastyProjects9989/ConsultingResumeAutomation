@@ -14,159 +14,94 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 llm = ChatGroq(model="deepseek-r1-distill-llama-70b", api_key=GROQ_API_KEY)
 
 def extract_json_from_response(response_text):
-    """
-    Extracts only the JSON part from a mixed LLM response.
-
-    Args:
-        response_text (str): The raw response from the LLM.
-
-    Returns:
-        str: Cleaned JSON string.
-    """
     match = re.search(r"\{.*\}", response_text, re.DOTALL)
-    return match.group(0) if match else None  # Return only the extracted JSON
+    return match.group(0) if match else None
 
 def generate_optimized_resume_per_client(client_experience):
-    """
-    Generates an ATS-optimized resume for a **single client** by integrating extracted experience data.
-
-    Args:
-        client_experience (dict): Client-specific extracted resume data.
-
-    Returns:
-        dict: Optimized experience for the client.
-    """
-
-    # LLM Prompt for ATS-Optimized Resume Per Client
     prompt = (
     "You are an expert resume writer and ATS optimization specialist. Your task is to enhance the provided resume experience "
     "for a **single client**, ensuring ATS-friendly formatting, impactful storytelling, and industry-specific keyword optimization "
     "by aligning the candidate's experience with the **job description requirements**.\n\n"
 
-    "### **KEY ENHANCEMENTS TO BE APPLIED** ###\n"
-    "1️⃣ **Replace existing tools with the most relevant ones from the job description**\n"
-    "   - Identify tools in the job description that are missing from the resume.\n"
-    "   - Replace or enhance existing tools in the experience where applicable.\n"
-    "   - Ensure **seamless integration of tools** into the enhanced experience points.\n\n"
+    "### 🎯 CORE OBJECTIVE ###\n"
+    "Transform raw experience into a polished, compelling resume segment that:\n"
+    "- Matches job description tools, responsibilities, and domain-specific keywords.\n"
+    "- Demonstrates quantifiable business impact.\n"
+    "- Aligns with both technical and strategic leadership expectations.\n\n"
 
-    "2️⃣ **Enhance the existing experience points instead of just adding new ones**\n"
-    "   - Modify current points by incorporating **missing technical details, problem-solving scenarios, and tools**.\n"
-    "   - Ensure a **logical progression** in how the job description aligns with the candidate’s experience.\n"
-    "   - **No redundant additions**—only meaningful and contextual enhancements.\n\n"
+    "### 🛠️ KEY ENHANCEMENTS TO BE APPLIED ###\n"
+    "1️⃣ **Replace or Enrich Tools With JD-Relevant Technologies**\n"
+    "- Cross-reference tools in the job description and resume.\n"
+    "- Replace outdated or irrelevant tools with those mentioned in the JD (e.g., PyTorch, XGBoost, Scala, Databricks).\n"
+    "- Integrate missing tools into the **existing context** instead of adding separate lines.\n\n"
 
-    "3️⃣ **Ensure the output has exactly 5 bullet points per role**\n"
-    "   - 🔹 **3 Concise Bullet Points (22-27 words each):** Highlight key tasks, accomplishments, and tools.\n"
-    "   - 🔹 **2 Detailed Bullet Points (25-30 words each):** Explain a challenge, the solution, and the impact.\n\n"
+    "2️⃣ **Enhance Existing Story With JD-Specific Contributions**\n"
+    "- Embed job-relevant problem-solving, scaling, and deployment scenarios into the current story.\n"
+    "- Prioritize R&D, reusable code templates, CI/CD, MLOps, business alignment, and dashboard delivery as described in the job description.\n"
+    "- Ensure all additions feel **authentic**, not generic.\n\n"
 
-    "4️⃣ **Highlight how the existing story was modified**\n"
-    "   - Show how the missing elements were incorporated into the experience.\n"
-    "   - Describe the **real-world scenarios** generated based on the existing story.\n"
-    "   - Ensure that all modifications **feel natural and aligned** with the candidate’s role.\n\n"
+    "3️⃣ **Ensure Output Has Exactly 5 Bullet Points per Role**\n"
+    "- 🔹 **3 Concise Points (22-27 words):** Highlight key tools, responsibilities, and impact.\n"
+    "- 🔹 **2 Detailed Points (25-30 words):** Include a challenge, solution, and business outcome.\n"
+    "- Avoid repetition. Each point should add new value.\n\n"
 
-    "### **STRICT OUTPUT FORMAT (JSON)** ###\n"
-    "📌 **Respond ONLY in valid JSON format. Do NOT include markdown, explanations, or extra text.**\n"
-    "Ensure the JSON follows the structured format for easy parsing.\n\n"
+    "4️⃣ **Summarize Modifications Clearly**\n"
+    "- Show what was added in terms of:\n"
+    "  • Technical tools (from JD)\n"
+    "  • Soft skills or leadership traits\n"
+    "  • Scenarios or deliverables\n"
+    "- Describe real-world scenarios logically extended from the original experience.\n\n"
 
-    "```json\n"
-    "{\n"
-    "  \"added_elements\": {\n"
-    "    \"technical_skills\": [\"Scala\", \"MongoDB\", \"MapReduce\", \"AWS S3\", \"EC2\"],\n"
-    "    \"soft_skills\": [\"Leadership\", \"Team Collaboration\", \"Strategic Thinking\"]\n"
-    "  },\n"
-
-    "  \"modifications\": {\n"
-    "    \"existing_story\": \"Developed and deployed AI-driven predictive models, improving fraud detection by 30%.\",\n"
-    "    \"enhanced_story\": \"Developed and deployed AI-driven predictive models, improving fraud detection by 30%. "
-    "Recognizing gaps, I implemented real-time anomaly detection pipelines, reducing false positives by 20%.\"\n"
-    "  },\n"
-
-    "  \"tool_integration\": {\n"
-    "    \"previous_tools\": [\"Python\", \"TensorFlow\"],\n"
-    "    \"new_tools_added\": [\"Scala\", \"MongoDB\", \"AWS S3\"],\n"
-    "    \"integration_details\": \"Upgraded ML workflows by incorporating Scala for high-performance computations and MongoDB for efficient model storage, optimizing fraud detection speed.\"\n"
-    "  },\n"
-
-    "  \"real_world_scenarios\": [\n"
-    "    \"Optimized fraud detection by building real-time anomaly pipelines using AWS S3 and MapReduce, reducing transaction review time by 25%.\",\n"
-    "    \"Enhanced AI-driven insights by transitioning model storage to MongoDB, improving query efficiency by 40%.\"\n"
-    "  ],\n"
-
-    "  \"enhanced_resume\": {\n"
-    "    \"role\": \"Senior Data Scientist\",\n"
-    "    \"company\": \"XYZ Corp\",\n"
-    "    \"enhanced_experience\": [\n"
-    "      \"Developed and deployed AI-driven predictive models, improving fraud detection accuracy by 30%.\",\n"
-    "      \"Designed scalable anomaly detection systems, reducing false positives by 20% through real-time analytics and advanced feature engineering.\",\n"
-    "      \"Optimized data pipelines for high-velocity financial transactions using Scala and AWS S3, improving processing speeds by 35%.\",\n"
-    "      \"Led security-compliant deployment of AI models on AWS, implementing encryption techniques to ensure data privacy and regulatory compliance.\",\n"
-    "      \"Collaborated with cross-functional teams to integrate AI models into production systems, enhancing operational efficiency.\"\n"
-    "    ],\n"
-    "    \"tools_used\": [\"AWS S3\", \"EC2\", \"Scala\", \"MongoDB\", \"Spark\"],\n"
-    "    \"industry_keywords\": [\"Machine Learning\", \"Fraud Detection\", \"Data Pipelines\", \"Real-Time Analytics\"]\n"
-    "  }\n"
-    "}\n"
-    "```\n\n"
-
-    "NOW GENERATE THE FINAL ATS-OPTIMIZED EXPERIENCE FOR THE CLIENT:\n\n"
+"5️⃣ **Format Requirements (MANDATORY)**\n"
+"- Respond ONLY in **valid JSON format**.\n"
+"- DO NOT include markdown, code blocks, explanations, or comments.\n"
+"- Your output MUST contain the following top-level keys:\n\n"
+"  📌 `added_elements`: \n"
+"      - `technical_tools`: List of newly integrated tools (from job description).\n"
+"      - `soft_skills`: List of soft skills emphasized in enhanced experience.\n\n"
+"  📌 `modifications`: \n"
+"      - `existing_story_enrichment`: Brief summary of how existing story was improved.\n"
+"      - `new_contributions`: Summary of new contributions added.\n\n"
+"  📌 `tool_integration`: \n"
+"      - `replaced_tools`: List of old tools replaced.\n"
+"      - `new_integrations`: List of tools added from the job description.\n"
+"      - `integration_details`: How tools were logically added to experience.\n\n"
+"  📌 `real_world_scenarios`: \n"
+"      - List of JD-aligned problem-solving use cases implemented in real-world settings.\n\n"
+"  📌 `enhanced_resume`: \n"
+"      - `role`: Job title at client\n"
+"      - `company`: Client/organization name\n"
+"      - `enhanced_experience`: List of **exactly 5 bullet points** with:\n"
+"          • 3 concise bullets (22-27 words)\n"
+"          • 2 detailed bullets (25-30 words)\n"
+"      - `tools_used`: List of technical tools referenced in bullets.\n"
+"      - `industry_keywords`: ATS keywords aligned with the job description.\n\n"
     "--- CLIENT EXPERIENCE DATA ---\n"
     f"{json.dumps(client_experience, indent=2)}\n"
-    )
-
-
-    # Call LLM for response
+)
     response = llm.invoke(prompt)
-
-    # Extract AIMessage content and clean response
     response_text = response.content if hasattr(response, "content") else str(response)
-
-    # Extract only JSON from response
     json_response = extract_json_from_response(response_text)
 
     if json_response is None:
         return {"error": "Invalid JSON response from LLM"}
-    
 
-    # Convert the response to a Python dictionary (safe handling)
     try:
-        optimized_client_resume = json.loads(json_response)
-        return optimized_client_resume
+        return json.loads(json_response)
     except json.JSONDecodeError as e:
-        print("\n❌ JSON Decoding Error:", str(e))  # Debug: Print exact JSON error
+        print("\n❌ JSON Decoding Error:", str(e))
         return {"error": "Invalid JSON response from LLM"}
 
-def process_all_clients(resume_text, jd_text):
-    """
-    Extracts resume data, processes each client separately, and merges optimized experiences.
-
-    Args:
-        resume_text (str): Candidate's original resume.
-        jd_text (str): Job description text.
-
-    Returns:
-        list: List of optimized experience sections per client.
-    """
-
-    # Step 1: Extract Resume Data Per Client
-    extracted_resume_data = extract_resume_data(resume_text, jd_text)
-
-    if "error" in extracted_resume_data:
-        return {"error": "Failed to extract resume details."}
-
-    experience_sections = extracted_resume_data.get("experience_sections", [])
-
+def process_all_clients(extracted_data_per_client):
     all_optimized_clients = []
 
-    # Step 2: Process Each Client Separately
-    for client_experience in experience_sections:
-      
-        optimized_client = generate_optimized_resume_per_client(client_experience)
-        print(optimized_client)
+    for client_data in extracted_data_per_client:
+        optimized_client = generate_optimized_resume_per_client(client_data)
         if "error" not in optimized_client:
             all_optimized_clients.append(optimized_client)
 
     return all_optimized_clients
 
-# Define as a LangChain tool
 resume_optimizer_agent = Tool(
     name="Resume Optimizer Per Client",
     func=process_all_clients,
